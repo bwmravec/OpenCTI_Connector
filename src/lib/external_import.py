@@ -6,6 +6,7 @@ import requests  #to use APIs GET
 from sultan.api import Sultan
 
 import stix2
+import stix_transformer
 from pycti import OpenCTIConnectorHelper
 
 
@@ -64,8 +65,16 @@ class ExternalImportConnector:
                 + str(time_now)
             )
             self.helper.log_info(message)
-            
-            return data
+            ##Calling the stix transformer
+            data_to_bundle = stix_transformer.create_stix_bundle("IPV4","IP adress", data, "api.blocklist")
+
+            message = (
+                f"{self.helper.connect_name} FOrmated to STIX2 bundle "
+                + str(time_now)
+            )
+            self.helper.log_info(message)
+            return data_to_bundle
+        
         else:
             message = (
                 f"{self.helper.connect_name} Failed to retrieve data on "
