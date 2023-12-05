@@ -5,8 +5,8 @@ from urllib.parse import urlparse
 
 from stix2 import Indicator, Bundle, Identity, Malware, Relationship, AttackPattern
 from stix2 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
-from lib.stix_item import StixItemType, guess_type
-from lib.logger import init_logging
+from stix_item import StixItemType, guess_type
+from logger import init_logging
 
 def ioc_to_title_and_pattern(ioc_value):
     ioc_type = guess_type(ioc_value)[0]
