@@ -6,7 +6,7 @@ services:
     environment:
       # Connector's definition parameters:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=ExternalImportConnectorTemplate
+      - CONNECTOR_NAME=BLACKLISTED_IP_ADRESS_CONNECTOR
       - CONNECTOR_SCOPE=Incident
       # Connector's generic execution parameters:
       - OPENCTI_URL=${OPENCTI_URL}
