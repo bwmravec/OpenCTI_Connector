@@ -6,10 +6,10 @@ services:
     environment:
       # Connector's definition parameters:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
-      - CONNECTOR_NAME=BLACKLISTED_IP_ADRESS_CONNECTOR
+      - CONNECTOR_NAME=${CONNECTOR_NAME}
       - CONNECTOR_SCOPE=Incident
       # Connector's generic execution parameters:
-      - OPENCTI_URL=${OPENCTI_URL}
+      - OPENCTI_URL=http://opencti:8080
       - OPENCTI_TOKEN=${OPENCTI_TOKEN}
       - CONNECTOR_ID=${CONNECTOR_ID}
       - CONNECTOR_CONFIDENCE_LEVEL=${CONNECTOR_CONFIDENCE_LEVEL} # From 0 (Unknown) to 100 (Fully trusted).

@@ -3,10 +3,217 @@ import sys
 import time
 from datetime import datetime
 import requests  #to use APIs GET
-
-from stix2 import *
-from include.stix_transformer import *
+#from stix2 import *
 from pycti import OpenCTIConnectorHelper
+import logging
+import re
+from datetime import datetime
+from urllib.parse import urlparse
+
+from stix2 import Indicator, Bundle, Identity, Malware, Relationship, AttackPattern, Bundle
+from stix2 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
+import re
+import socket
+import validators
+from fqdn import FQDN
+from enum import Enum
+from urllib.parse import urlparse
+import logging
+import multiprocessing.util
+
+
+class PluginFormatter(logging.Formatter):
+    """Custom logger to colorize messages."""
+
+    COLOR_RED = 31
+    COLOR_GREEN = 32
+    COLOR_YELLOW = 33
+    COLOR_BLUE = 34
+    COLOR_PURPLE = 35
+
+    LOG_COLORS = {
+        logging.DEBUG: COLOR_BLUE,
+        logging.INFO: COLOR_GREEN,
+        logging.WARNING: COLOR_YELLOW,
+        logging.ERROR: COLOR_RED,
+        logging.CRITICAL: COLOR_PURPLE,
+    }
+
+    def __init__(self, fmt=None, datefmt=None):
+        logging.Formatter.__init__(self, fmt, datefmt)
+
+    def __colorize(self, s, color=COLOR_RED):
+        """Colorize a characters string."""
+        retval = chr(0x1B) + "[0;%dm" % color + str(s) + chr(0x1B) + "[0m"
+        return retval
+
+    def format(self, record):
+        """A custom format handler to colorize log level names."""
+        colorno = PluginFormatter.LOG_COLORS.get(record.levelno, None)
+        if colorno is not None:
+            record.levelname = self.__colorize(record.levelname, colorno)
+        msg = super(PluginFormatter, self).format(record)
+        return msg
+
+def customize_logger(logger, fmt=multiprocessing.util.DEFAULT_LOGGING_FORMAT):
+    assert len(logger.handlers) == 1
+    handler = logging.StreamHandler()
+    formatter = PluginFormatter(fmt)
+    handler.setFormatter(formatter)
+    logger.handlers[0] = handler
+
+def get_logging():
+    return logging
+
+def init_logging(loglevel = logging.INFO):
+    """Initialize the logging subsystem, at the specified level."""
+    # Set the proper verbosity level
+    if  isinstance(loglevel, int):
+        numeric_loglevel = loglevel
+    else:
+        numeric_loglevel = getattr(logging, loglevel.upper(), None)
+    logging.basicConfig(level=numeric_loglevel)
+
+    # Install our own logging handler
+    log_format = "[%(asctime)s] %(levelname)s : %(message)s"
+    customize_logger(logging.root, fmt=log_format)
+
+
+class StixItemType(Enum):
+    UNKNOWN         =   0,
+    IPADDR          =   1,
+    DOMAIN          =   2,
+    URL             =   3,
+    SHA256          =   4,
+    MD5             =   5,
+    SHA1            =   6,
+
+
+def guess_type(value):
+        if not value or len(value) == 0:
+            return StixItemType.UNKNOWN, "unknown"
+
+        if re.match("^[a-f0-9]{64}$", value, flags=re.IGNORECASE):
+            return StixItemType.SHA256, "SHA256"
+
+        if re.match("^[a-f0-9]{40}$", value, flags=re.IGNORECASE):
+            return StixItemType.SHA1, "SHA1"
+
+        if re.match("^[a-f0-9]{32}$", value, flags=re.IGNORECASE):
+            return StixItemType.MD5, "MD5"
+
+        try:
+            socket.inet_aton(value)
+            return StixItemType.IPADDR, "IPv4"
+        except socket.error:
+            pass
+
+        if len(value) <= 255:
+            fqdn = FQDN(value)
+            if fqdn.is_valid:
+                return StixItemType.DOMAIN, "domain"
+
+        if validators.url(value):
+            return StixItemType.URL, "URL"
+
+        return StixItemType.UNKNOWN, "unknown"
+
+
+
+def ioc_to_title_and_pattern(ioc_value):
+    ioc_type = guess_type(ioc_value)[0]
+
+    if ioc_type == StixItemType.SHA256:
+        return f"Malicious SHA256 - {ioc_value}", f"[file:hashes.'SHA-256' = '{ioc_value.lower()}']"
+    elif ioc_type == StixItemType.SHA1:
+        return f"Malicious SHA1 - {ioc_value}", f"[file:hashes.'SHA-1' = '{ioc_value.lower()}']"
+    elif ioc_type == StixItemType.MD5:
+        return f"Malicious MD5 - {ioc_value}", f"[file:hashes.MD5 = '{ioc_value.lower()}']"
+    elif ioc_type == StixItemType.IPADDR:
+        return f"Malicious IP - {ioc_value}", f"[ipv4-addr:value = '{ioc_value}']"
+    elif ioc_type == StixItemType.DOMAIN:
+        return f"Malicious domain - {ioc_value}", f"[domain-name:value = '{ioc_value.lower()}']"
+    elif ioc_type == StixItemType.URL:
+        pattern = f"[url:value = '{ioc_value}']"
+        if '\\' in pattern:
+            pattern = pattern.replace('\\', '\\\\')
+        return f"Malicious URL - {ioc_value}", pattern
+    else:
+        raise Exception(f"Unknown IOC type for value '{ioc_value}'")
+
+
+def ids_to_mitre_attack_patterns(ids):
+    aps = []
+    for mid in ids.split(","):
+        if not re.match(r"T\d{4}(\.\d{3})?$", mid):
+            logging.warning(f"Skipping invalid MITRE technique ID: {mid}")
+            continue
+        if mid.startswith('T0'):
+            url = f"https://collaborate.mitre.org/attackics/index.php/Technique/{mid}"
+        else:
+            url = f"https://attack.mitre.org/techniques/{mid}/"
+        attack_pattern = AttackPattern(name=mid, external_references=[{"url": url, "source_name": "mitre-attack", "external_id": mid}])
+        aps.append(attack_pattern)
+    return aps
+
+def create_stix_bundle(threat_name, description, iocs, author, source=None, url=None, mitre=None, tlp=None):
+    init_logging()
+
+    identity = Identity(name=author)
+    objects = [identity]
+    malware = Malware(name=threat_name, is_family=False, description=description)
+
+    if url:
+        if source:
+            source_name = source
+        else:
+            source_name = urlparse(url).netloc
+        malware_with_ref = malware.new_version(external_references=[{"source_name": source_name, "url": url}])
+        objects.append(malware_with_ref)
+    else:
+        objects.append(malware)
+
+    tlp_mark = None
+    if tlp:
+        supported_tlps = {
+            'clear': TLP_WHITE,
+            'white': TLP_WHITE,
+            'green': TLP_GREEN,
+            'amber': TLP_AMBER,
+            'red': TLP_RED,
+        }
+        tlp_str = tlp.lower()
+        if tlp_str.startswith('tlp:'):
+            tlp_str = tlp_str[4:]
+        if tlp_str not in supported_tlps:
+            logging.critical(f'"{tlp}" TLP code is not supported. Terminating script.')
+            return None
+        tlp_mark = supported_tlps[tlp_str]
+
+        objects.append(tlp_mark)
+
+    aps = []
+    if mitre:
+        aps = ids_to_mitre_attack_patterns(mitre)
+        objects.extend(aps)
+    for ioc in iocs:
+        try:
+            title, pattern = ioc_to_title_and_pattern(ioc)
+        except Exception as e:
+            logging.error(f"Skipping indicator: {e}")
+            continue
+        description = " ".join(title.split()[:2]) + f" involved with {threat_name}"
+        indicator = Indicator(labels="malicious-activity", pattern_type='stix', pattern=pattern,
+                              valid_from=datetime.now(), description=description, name=title,
+                              created_by_ref=identity, object_marking_refs=tlp_mark)
+        relationship = Relationship(relationship_type='indicates', source_ref=indicator.id, target_ref=malware.id)
+        objects.append(indicator)
+        objects.append(relationship)
+        for ap in aps:
+            relationship = Relationship(relationship_type='indicates', source_ref=indicator.id, target_ref=ap.id)
+            objects.append(relationship)
+
+    return Bundle(objects=objects)
 
 
 class ExternalImportConnector:
@@ -140,7 +347,7 @@ class ExternalImportConnector:
                     try:
                         # Performing the collection of intelligence
                         bundle_objects = self._collect_intelligence()
-                        bundle = stix2.Bundle(
+                        bundle = Bundle(
                             objects=bundle_objects, allow_custom=True
                         ).serialize()
 
