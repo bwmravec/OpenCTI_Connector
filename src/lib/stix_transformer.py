@@ -8,6 +8,7 @@ from stix2 import TLP_WHITE, TLP_GREEN, TLP_AMBER, TLP_RED
 from stix_item import StixItemType, guess_type
 from logger import init_logging
 
+
 def ioc_to_title_and_pattern(ioc_value):
     ioc_type = guess_type(ioc_value)[0]
 
