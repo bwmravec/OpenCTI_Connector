@@ -3,15 +3,14 @@ import sys
 import time
 from datetime import datetime
 import requests  #to use APIs GET
-from sultan.api import Sultan
 
 import stix2
-from stix_transformer import create_stix_bundle
+from include.stix_transformer import *
 from pycti import OpenCTIConnectorHelper
 
 
 class ExternalImportConnector:
-    """Specific external-import connector
+    """Specific external-import connectorS
 
     This class encapsulates the main actions, expected to be run by the
     any external-import connector. Note that the attributes defined below
