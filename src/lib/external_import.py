@@ -66,7 +66,7 @@ class ExternalImportConnector:
             self.helper.log_info(message)
             ##Calling the stix transformer
             data_to_bundle = create_stix_bundle("IPV4","IP adress", data, "api.blocklist")
-
+            print("HELOOOOOOOOOOOOOOOOO THESE ARE THE DATA TRANSFORMED TO STIX :"+data_to_bundle)
             message = (
                 f"{self.helper.connect_name} Formated to STIX2 bundle "
                 + str(time_now)
@@ -140,7 +140,7 @@ class ExternalImportConnector:
                     try:
                         # Performing the collection of intelligence
                         bundle_objects = self._collect_intelligence()
-                        bundle = stix2.Bundle(
+                        bundle = Bundle(
                             objects=bundle_objects, allow_custom=True
                         ).serialize()
 

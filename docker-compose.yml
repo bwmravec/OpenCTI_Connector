@@ -1,6 +1,6 @@
 version: '3'
 services:
-  connector:
+  connector-blacklisteIP:
     build: .
     container_name: ${CONTAINER_NAME}
     environment:
@@ -18,8 +18,9 @@ services:
       # Connector's custom execution parameters:
       - EXTRA_PARAMETER=${EXTRA_PARAMETER}
     restart: always
+    networks:
+      - opencti_stack_default
 
 networks:
-  default:
+  opencti_stack_default:
     external: true
-    name: docker_default

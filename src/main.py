@@ -24,8 +24,9 @@ class CustomConnector(ExternalImportConnector):
         Raising ValueErrors or similar might be useful for tracking down issues with the connector initialization.
         """
         super().__init__()
+        self.my_attribute = os.environ.get("BLACKLISTED_URL", "URL")
 
-    def _collect_intelligence(self) -> []:
+    #def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
 
         Aadd your code depending on the use case as stated at https://docs.opencti.io/latest/development/connectors/.
@@ -34,15 +35,15 @@ class CustomConnector(ExternalImportConnector):
 
         Returns:
             stix_objects: A list of STIX2 objects."""
-        self.helper.log_debug(
-            f"{self.helper.connect_name} connector is starting the collection of objects..."
-        )
-        stix_objects = []
+     #   self.helper.log_debug(
+     #       f"{self.helper.connect_name} connector is starting the collection of objects..."
+     #   )
+     #   stix_objects = []
 
         # ===========================
         # === Add your code below ===
         # ===========================
-        self.helper.log_debug("Creating a sample reference using STIX2...")
+        """self.helper.log_debug("Creating a sample reference using STIX2...")
         main_reference = stix2.ExternalReference(
             source_name="GitHub",
             url="https://github.com/OpenCTI-Platform/connectors",
@@ -61,15 +62,15 @@ class CustomConnector(ExternalImportConnector):
                 "external_references": [main_reference],
             },
         )
-        stix_objects.append(ipv4_observable)
+        stix_objects.append(ipv4_observable)"""
         # ===========================
         # === Add your code above ===
         # ===========================
 
-        self.helper.log_info(
-            f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
-        )
-        return stix_objects
+      #  self.helper.log_info(
+      #      f"{len(stix_objects)} STIX2 objects have been compiled by {self.helper.connect_name} connector. "
+      #  )
+      #  return stix_objects
 
 
 if __name__ == "__main__":
