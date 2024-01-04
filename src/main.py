@@ -30,7 +30,7 @@ class CustomConnector(ExternalImportConnector):
         self.helper.log_debug("The URL given is : " + URL)
 
         return URL"""
-
+        super().__init__()
 
     #def _collect_intelligence(self) -> []:
         """Collects intelligence from channels
@@ -85,5 +85,5 @@ if __name__ == "__main__":
         connector.run()
     except Exception as e:
         print(e)
-        time.sleep(10)
+        #time.sleep(10)
         sys.exit(0)
