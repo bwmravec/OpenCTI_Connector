@@ -5,6 +5,7 @@ import time
 import stix2
 from lib.external_import import ExternalImportConnector
 
+global URL
 
 class CustomConnector(ExternalImportConnector):
     def __init__(self):
@@ -22,9 +23,14 @@ class CustomConnector(ExternalImportConnector):
         Additional tunning can be made to the connector by adding additional environment variables.
 
         Raising ValueErrors or similar might be useful for tracking down issues with the connector initialization.
-        """
+        
         super().__init__()
-        self.my_attribute = os.environ.get("BLACKLISTED_URL", "URL")
+        self.blacklist_IP = os.environ.get("BLACKLISTED_URL", "None")
+        URL = self.blacklist_IP
+        self.helper.log_debug("The URL given is : " + URL)
+
+        return URL"""
+
 
     #def _collect_intelligence(self) -> []:
         """Collects intelligence from channels

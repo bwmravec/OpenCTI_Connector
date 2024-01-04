@@ -25,6 +25,12 @@ class ExternalImportConnector:
     def __init__(self):
         self.helper = OpenCTIConnectorHelper({})
 
+        """Taking URL from the env file"""
+        super().__init__()
+        self.blacklist_IP = os.environ.get("BLACKLISTED_URL", "None")
+        URL = self.blacklist_IP
+        self.helper.log_debug("The URL given is : " + URL)
+
         # Specific connector attributes for external import connectors
         try:
             self.interval = os.environ.get("CONNECTOR_RUN_EVERY", None).lower()
@@ -57,13 +63,14 @@ class ExternalImportConnector:
         print("The current date and time is :", current_time)
         url = 'http://api.blocklist.de/getlast.php?time='+current_time
         response = requests.get(url)
+        self.helper.log_debug("websites response is : " + response)
         if response.status_code == 200:
             data = response.text.splitlines()
             message = (
                 f"{self.helper.connect_name} connector successfully retrieved data and converting it to STIX2 Format "
                 + str(time_now)
             )
-            self.helper.log_info(message)
+            #self.helper.log_info(message)
             ##Calling the stix transformer
             data_to_bundle = create_stix_bundle("IPV4","IP adress", data, "api.blocklist")
             print("HELOOOOOOOOOOOOOOOOO THESE ARE THE DATA TRANSFORMED TO STIX :"+data_to_bundle)
@@ -79,7 +86,7 @@ class ExternalImportConnector:
                 f"{self.helper.connect_name} Failed to retrieve data on "
                 + str(time_now)
             )
-            self.helper.log_info(message)
+            self.helper.log_warning(message)
 
 
     def _get_interval(self) -> int:
@@ -151,6 +158,7 @@ class ExternalImportConnector:
                             bundle,
                             update=self.update_existing_data,
                             work_id=work_id,
+                            entities_types=self.helper.connect_scope,
                         )
                     except Exception as e:
                         self.helper.log_error(str(e))
