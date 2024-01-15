@@ -1,0 +1,17 @@
+opencti:
+  url: 'http://localhost:8080'
+  token: 'b50bf892-f5d7-42c9-9f6b-9c0c9bfeb0b3'
+
+connector:
+  id: 'd119abcc-9eec-457d-86bc-43262d1e76fe'
+  type: 'EXTERNAL_IMPORT'
+  name: 'blacklistIP'
+  scope: 'attack-pattern' # MIME type or SCO
+  confidence_level: 100 # From 0 (Unknown) to 100 (Fully trusted)
+  log_level: 'info'
+  update_existing_data: false
+  run_and_terminate: false
+
+blacklistIP:
+  interval: 1 # in days
+  url: 'http://api.blocklist.de/getlast.php?time='
