@@ -1,8 +1,7 @@
 version: '3'
 services:
-  connector-blacklisteIP:
+  connector-blacklistip:
     build: .
-    container_name: ${CONTAINER_NAME}
     environment:
       # Connector's definition parameters:
       - CONNECTOR_TYPE=EXTERNAL_IMPORT
