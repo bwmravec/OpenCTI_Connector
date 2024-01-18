@@ -43,14 +43,20 @@ class blacklistIPConnector:
     def get_interval(self) -> int:
         return int(self.blacklistIP_interval) * 60 * 60 * 24
     
-    def _collect_intelligence(self) -> list:
+    def _collect_intelligence(self,URL_GIVEN) -> list:
         time_now = datetime.now()
         current_time = time_now.strftime("%H:%M")
 
-        print("The current date and time is :", current_time)
-        url = 'http://api.blocklist.de/getlast.php?time='+current_time
+        self.helper.log_info("The current date and time is :", current_time)
+        self.helper.log_info("The type of current time variable is :", type(current_time))
+        self.helper.log_info("The type of current URL is :", type(URL_GIVEN))
+        #url = 'http://api.blocklist.de/getlast.php?time='+current_time
+        url = URL_GIVEN+current_time
+        self.helper.log_info("The final URL is :", url)
         response = requests.get(url)
-        self.helper.log_debug("websites response is : " + response)
+        self.helper.log_info(response.status_code)
+        #self.helper.log_info(response.text)
+        #self.helper.log_info(response.content)
         if response.status_code == 200:
             #data = response.text.splitlines()
             message = (
@@ -59,7 +65,7 @@ class blacklistIPConnector:
             )
             #self.helper.log_info(message)
             ##Calling the stix transformer
-            data_to_bundle = self.create_stix_objects(response)
+            data_to_bundle = self.create_stix_objects(response.text)
             print("HELOOOOOOOOOOOOOOOOO THESE ARE THE DATA TRANSFORMED TO STIX :"+data_to_bundle)
             message = (
                 f"{self.helper.connect_name} Formated to STIX2 bundle "
@@ -77,13 +83,15 @@ class blacklistIPConnector:
     def create_stix_objects(self, data):
         stix_objects = []
         for line in data.splitlines():
-            timestamp = int(time.time())
+            #timestamp = int(time.time())
+            time_now = datetime.now()
+            current_time = datetime.now().isoformat(timespec='seconds')
             # Assuming each line contains an IP address and other data
             ip = line.split(',')[0]  # Adjust this based on the actual data format
             indicator = Indicator(
                 pattern="[ipv4-addr:value = '{}']".format(ip),
                 pattern_type="stix",
-                valid_from="'{}'".format(timestamp)  # Adjust the timestamp as needed
+                valid_from=time_now  # Adjust the timestamp as needed
             )
             stix_objects.append(indicator)
 
@@ -120,7 +128,7 @@ class blacklistIPConnector:
                     and len(self.blacklistIP_url) > 0
                 ):
                     blacklist_data = self._collect_intelligence(self.blacklistIP_url)
-                    self.helper.log_debug(blacklist_data)
+                    #self.helper.log_debug(blacklist_data)
                     self.send_bundle(work_id, blacklist_data)
 
                 # Store the current timestamp as a last run
@@ -148,12 +156,12 @@ class blacklistIPConnector:
         except Exception as e:
             self.helper.log_error(str(e))
 
-    def send_bundle(self, work_id: str, serialized_bundle: str) -> None:
+    def send_bundle(self, work_id: str, serialized_bundle) -> None:
         try:
             self.helper.send_stix2_bundle(
-                serialized_bundle,
+                bundle=serialized_bundle,
                 entities_types=self.helper.connect_scope,
-                update=self.update_existing_data,
+                #update=self.update_existing_data,
                 work_id=work_id,
             )
         except Exception as e:
