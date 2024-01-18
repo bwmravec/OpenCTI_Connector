@@ -16,9 +16,10 @@ services:
       - CONNECTOR_RUN_EVERY=${CONNECTOR_RUN_EVERY}
       # Connector's custom execution parameters:
       - EXTRA_PARAMETER=${EXTRA_PARAMETER}
-      - HTTP_PROXY=http://10.32.156.23:3128
-      - HTTPS_PROXY=http://10.32.112.11:3128
-      - NO_PROXY=localhost,10.32.150.162,127.0.0.1,docker-registry.example.com,.corp,opencti
+      # Add proxy parametrs below if you need them
+      # - HTTP_PROXY=ChangeMe
+      # - HTTPS_PROXY=ChangeMe
+      # - NO_PROXY=ChangeMe
     restart: always
     networks:
       - opencti_stack_v1_default
