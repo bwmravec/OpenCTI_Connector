@@ -5,10 +5,11 @@ import sys
 import yaml
 import time
 import requests
+#import uuid
 
 from datetime import datetime
 from pycti import OpenCTIConnectorHelper, get_config_variable
-from stix2 import Indicator,Bundle
+from stix2 import Indicator,Bundle,IPv4Address
 
 class blacklistIPConnector:
     def __init__(self):
@@ -47,12 +48,12 @@ class blacklistIPConnector:
         time_now = datetime.now()
         current_time = time_now.strftime("%H:%M")
 
-        self.helper.log_info("The current date and time is :", current_time)
-        self.helper.log_info("The type of current time variable is :", type(current_time))
-        self.helper.log_info("The type of current URL is :", type(URL_GIVEN))
+        #self.helper.log_info("The current date and time is :", current_time)
+        #self.helper.log_info("The type of current time variable is :", type(current_time))
+        #self.helper.log_info("The type of current URL is :", type(URL_GIVEN))
         #url = 'http://api.blocklist.de/getlast.php?time='+current_time
         url = URL_GIVEN+current_time
-        self.helper.log_info("The final URL is :", url)
+        #self.helper.log_info("The final URL is :", url)
         response = requests.get(url)
         self.helper.log_info(response.status_code)
         #self.helper.log_info(response.text)
@@ -63,7 +64,7 @@ class blacklistIPConnector:
                 f"{self.helper.connect_name} connector successfully retrieved data and converting it to STIX2 Format "
                 + str(time_now)
             )
-            #self.helper.log_info(message)
+            self.helper.log_info(message)
             ##Calling the stix transformer
             data_to_bundle = self.create_stix_objects(response.text)
             print("HELOOOOOOOOOOOOOOOOO THESE ARE THE DATA TRANSFORMED TO STIX :"+data_to_bundle)
@@ -83,18 +84,32 @@ class blacklistIPConnector:
     def create_stix_objects(self, data):
         stix_objects = []
         for line in data.splitlines():
+            time_now = datetime.now()
+            current_time = datetime.now().isoformat(timespec='seconds')
+            # Assuming each line contains an IP address and other data
+            ip = line.split(',')[0]  
+            ipv4 = IPv4Address(
+                type = "ipv4-addr",
+                spec_version = "2.1",
+                #id = "ipv4-addr--'{}'".format(uuid.uuid4()),
+                value = "'{}']".format(ip)
+                #value = "[ipv4-addr:value = '{}']".format(ip)
+            )
+            stix_objects.append(ipv4)
+
+        
+        """for line in data.splitlines():
             #timestamp = int(time.time())
             time_now = datetime.now()
             current_time = datetime.now().isoformat(timespec='seconds')
             # Assuming each line contains an IP address and other data
-            ip = line.split(',')[0]  # Adjust this based on the actual data format
+            ip = line.split(',')[0]  
             indicator = Indicator(
                 pattern="[ipv4-addr:value = '{}']".format(ip),
                 pattern_type="stix",
-                valid_from=time_now  # Adjust the timestamp as needed
+                valid_from=time_now  
             )
-            stix_objects.append(indicator)
-
+            stix_objects.append(indicator)"""
         return Bundle(objects=stix_objects).serialize()
 
     def process_data(self):
@@ -129,7 +144,8 @@ class blacklistIPConnector:
                 ):
                     blacklist_data = self._collect_intelligence(self.blacklistIP_url)
                     #self.helper.log_debug(blacklist_data)
-                    self.send_bundle(work_id, blacklist_data)
+                    self.helper.log_info(type(blacklist_data))
+                    self.send_bundle(work_id, str(blacklist_data))
 
                 # Store the current timestamp as a last run
                 message = "Connector successfully run, storing last_run as " + str(
@@ -156,7 +172,7 @@ class blacklistIPConnector:
         except Exception as e:
             self.helper.log_error(str(e))
 
-    def send_bundle(self, work_id: str, serialized_bundle) -> None:
+    def send_bundle(self, work_id: str, serialized_bundle : str) -> None:
         try:
             self.helper.send_stix2_bundle(
                 bundle=serialized_bundle,
